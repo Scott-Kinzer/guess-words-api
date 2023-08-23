@@ -10,6 +10,10 @@ export class MailService {
       from: process.env.SENDER_EMAIL,
       subject: 'Guess words pincode',
       text: `Please enter this pincode (${pincode}) to register in the app`,
+      template: './pincode',
+      context: {
+        pincode,
+      },
     });
 
     return response;
