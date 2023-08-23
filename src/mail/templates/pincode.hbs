@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Guess App</title>
+    <style>
+    body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+    }
+
+    .pincode-container {
+        text-align: center;
+        margin-top: 10px;
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        width: 300px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .pincode {
+        font-size: 24px;
+        font-weight: bold;
+        color: #3498db;
+        margin: 10px 0;
+    }
+    </style>
+</head>
+<body>
+    <div class="pincode-container">
+        <p>Hello!</p>
+        <p>Please enter this pincode in the Guess app:</p>
+        <p class="pincode">{{ pincode }}</p>
+    </div>
+</body>
+</html>
