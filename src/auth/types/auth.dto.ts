@@ -20,3 +20,13 @@ export const registerUserSchema = Joi.object({
       'Password must contain at least one special character',
     ),
 });
+
+export type PincodeUserDto = {
+  email: string;
+  pincode: string;
+};
+
+export const pincodeUserSchema = Joi.object({
+  email: Joi.string().email().required(),
+  pincode: Joi.string().required().length(5),
+});
