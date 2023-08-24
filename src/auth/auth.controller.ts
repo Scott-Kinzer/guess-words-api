@@ -1,7 +1,12 @@
 import { Body, Controller, Post, UsePipes } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JoiValidationPipe } from './pipes/joiValidationPipe';
-import { RegisterUserDto, registerUserSchema } from './types/auth.dto';
+import {
+  PincodeUserDto,
+  RegisterUserDto,
+  pincodeUserSchema,
+  registerUserSchema,
+} from './types/auth.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -13,5 +18,13 @@ export class AuthController {
     const user = await this.authService.registerUser(registerUserDto);
 
     return user;
+  }
+
+  @Post('pincode')
+  @UsePipes(new JoiValidationPipe(pincodeUserSchema))
+  async pincodeRegister(@Body() pincoderUserDto: PincodeUserDto) {
+    await this.authService.registerPincodeUser(pincoderUserDto);
+
+    return { authToken: '', refreshToken: '' };
   }
 }
