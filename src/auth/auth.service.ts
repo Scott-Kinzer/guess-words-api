@@ -4,12 +4,14 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { hashPassword } from 'src/helpers/hashPassword';
 import { generatePincode } from 'src/helpers/generatePincode';
 import { MailService } from 'src/mail/mail.service';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly mailService: MailService,
+    private jwtService: JwtService,
   ) {}
 
   async registerUser(registerUserDto: RegisterUserDto) {
@@ -135,5 +137,24 @@ export class AuthService {
         isValid: true,
       },
     });
+
+    const tokens = this.generateTokens({ id: user.id, email: user.email });
+
+    await this.prismaService.authToken.create({
+      data: {
+        userId: user.id,
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      },
+    });
+
+    return tokens;
+  }
+
+  generateTokens(user: { id: string; email: string }) {
+    const accessToken = this.jwtService.sign(user, { expiresIn: '10h' });
+    const refreshToken = this.jwtService.sign(user, { expiresIn: '7d' });
+
+    return { accessToken, refreshToken };
   }
 }
