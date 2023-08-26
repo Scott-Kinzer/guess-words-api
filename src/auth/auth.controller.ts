@@ -23,8 +23,8 @@ export class AuthController {
   @Post('pincode')
   @UsePipes(new JoiValidationPipe(pincodeUserSchema))
   async pincodeRegister(@Body() pincoderUserDto: PincodeUserDto) {
-    await this.authService.registerPincodeUser(pincoderUserDto);
+    const tokens = await this.authService.registerPincodeUser(pincoderUserDto);
 
-    return { authToken: '', refreshToken: '' };
+    return tokens;
   }
 }
