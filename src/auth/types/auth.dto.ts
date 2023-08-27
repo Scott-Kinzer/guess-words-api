@@ -30,3 +30,13 @@ export const pincodeUserSchema = Joi.object({
   email: Joi.string().email().required(),
   pincode: Joi.string().required().length(5),
 });
+
+export type RefreshTokensDto = {
+  refreshToken: string;
+  accessToken: string;
+};
+
+export const refreshTokensSchema = Joi.object({
+  refreshToken: Joi.string().required(),
+  accessToken: Joi.string().required(),
+});
