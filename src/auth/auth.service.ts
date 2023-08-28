@@ -1,11 +1,12 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import {
+  LoginUserDto,
   PincodeUserDto,
   RefreshTokensDto,
   RegisterUserDto,
 } from './types/auth.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { hashPassword } from 'src/helpers/hashPassword';
+import { comparePasswords, hashPassword } from 'src/helpers/hashPassword';
 import { generatePincode } from 'src/helpers/generatePincode';
 import { MailService } from 'src/mail/mail.service';
 import { JwtService } from '@nestjs/jwt';
@@ -210,5 +211,58 @@ export class AuthService {
     } catch (e) {
       throw new BadRequestException(e.message);
     }
+  }
+
+  async login(loginUser: LoginUserDto) {
+    const user = await this.prismaService.user.findUnique({
+      where: {
+        email: loginUser.email,
+        password: {
+          not: null,
+        },
+        AND: {
+          password: {
+            not: '',
+          },
+        },
+      },
+    });
+
+    const userValid = await this.prismaService.userAuth.findUnique({
+      where: {
+        userId: user.id,
+      },
+    });
+
+    if (!userValid.isValid) {
+      throw new BadRequestException('User not valid');
+    }
+
+    if (!user) {
+      throw new BadRequestException('User not exists');
+    }
+
+    const isValidPassword = await comparePasswords(
+      loginUser.password,
+      user.password,
+    );
+
+    if (!isValidPassword) {
+      throw new BadRequestException('Wrong password');
+    }
+
+    const tokens = this.generateTokens({ id: user.id, email: user.email });
+
+    await this.prismaService.authToken.update({
+      where: {
+        userId: user.id,
+      },
+      data: {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      },
+    });
+
+    return tokens;
   }
 }

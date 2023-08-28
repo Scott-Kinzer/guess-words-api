@@ -40,3 +40,10 @@ export const refreshTokensSchema = Joi.object({
   refreshToken: Joi.string().required(),
   accessToken: Joi.string().required(),
 });
+
+export type LoginUserDto = {
+  email: string;
+  password: string;
+};
+
+export const loginUserSchema = registerUserSchema;
