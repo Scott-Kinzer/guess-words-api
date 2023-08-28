@@ -2,9 +2,11 @@ import { Body, Controller, Post, UsePipes } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JoiValidationPipe } from './pipes/joiValidationPipe';
 import {
+  LoginUserDto,
   PincodeUserDto,
   RefreshTokensDto,
   RegisterUserDto,
+  loginUserSchema,
   pincodeUserSchema,
   refreshTokensSchema,
   registerUserSchema,
@@ -34,6 +36,14 @@ export class AuthController {
   @UsePipes(new JoiValidationPipe(refreshTokensSchema))
   async refreshToken(@Body() refreshTokens: RefreshTokensDto) {
     const tokens = await this.authService.refreshToken(refreshTokens);
+
+    return tokens;
+  }
+
+  @Post('login')
+  @UsePipes(new JoiValidationPipe(loginUserSchema))
+  async login(@Body() loginUser: LoginUserDto) {
+    const tokens = await this.authService.login(loginUser);
 
     return tokens;
   }
