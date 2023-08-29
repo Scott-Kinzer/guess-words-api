@@ -47,3 +47,13 @@ export type LoginUserDto = {
 };
 
 export const loginUserSchema = registerUserSchema;
+
+export type UserGoogleDto = {
+  email: string;
+  firstName: string;
+};
+
+export const userGoogleSchema = Joi.object({
+  email: Joi.string().required(),
+  firstName: Joi.string().required(),
+});

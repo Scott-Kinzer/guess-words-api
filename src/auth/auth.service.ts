@@ -4,6 +4,7 @@ import {
   PincodeUserDto,
   RefreshTokensDto,
   RegisterUserDto,
+  UserGoogleDto,
 } from './types/auth.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { comparePasswords, hashPassword } from 'src/helpers/hashPassword';
@@ -20,7 +21,7 @@ export class AuthService {
   ) {}
 
   async registerUser(registerUserDto: RegisterUserDto) {
-    const isUserExists = await this.prismaService.user.findUnique({
+    const isUserExists = await this.prismaService.user.findFirst({
       where: {
         email: registerUserDto.email,
         password: {
@@ -98,7 +99,7 @@ export class AuthService {
   }
 
   async registerPincodeUser(pincodeUserDto: PincodeUserDto) {
-    const user = await this.prismaService.user.findUnique({
+    const user = await this.prismaService.user.findFirst({
       where: {
         email: pincodeUserDto.email,
         password: {
@@ -214,7 +215,7 @@ export class AuthService {
   }
 
   async login(loginUser: LoginUserDto) {
-    const user = await this.prismaService.user.findUnique({
+    const user = await this.prismaService.user.findFirst({
       where: {
         email: loginUser.email,
         password: {
@@ -264,5 +265,60 @@ export class AuthService {
     });
 
     return tokens;
+  }
+
+  async googleSignIn(userGoogle: UserGoogleDto) {
+    const user = await this.prismaService.user.findFirst({
+      where: {
+        email: userGoogle.email,
+        password: null,
+      },
+    });
+
+    if (!user) {
+      const userCreated = await this.prismaService.user.create({
+        data: {
+          email: userGoogle.email,
+        },
+      });
+
+      const tokens = this.generateTokens({
+        id: userCreated.id,
+        email: userCreated.email,
+      });
+
+      await this.prismaService.userAuth.create({
+        data: {
+          userId: userCreated.id,
+          email: userCreated.email,
+          pincode: null,
+          isValid: true,
+        },
+      });
+
+      await this.prismaService.authToken.create({
+        data: {
+          userId: userCreated.id,
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
+        },
+      });
+
+      return tokens;
+    } else {
+      const tokens = this.generateTokens({ id: user.id, email: user.email });
+
+      await this.prismaService.authToken.update({
+        where: {
+          userId: user.id,
+        },
+        data: {
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
+        },
+      });
+
+      return tokens;
+    }
   }
 }
