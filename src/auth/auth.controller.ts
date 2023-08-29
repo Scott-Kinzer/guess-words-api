@@ -1,4 +1,12 @@
-import { Body, Controller, Post, UsePipes } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Req,
+  UseGuards,
+  UsePipes,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JoiValidationPipe } from './pipes/joiValidationPipe';
 import {
@@ -11,6 +19,7 @@ import {
   refreshTokensSchema,
   registerUserSchema,
 } from './types/auth.dto';
+import { GoogleOauthGuard } from './guards/google.oauth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -44,6 +53,19 @@ export class AuthController {
   @UsePipes(new JoiValidationPipe(loginUserSchema))
   async login(@Body() loginUser: LoginUserDto) {
     const tokens = await this.authService.login(loginUser);
+
+    return tokens;
+  }
+
+  @Get('google')
+  @UseGuards(GoogleOauthGuard)
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  async auth() {}
+
+  @Get('google-callback')
+  @UseGuards(GoogleOauthGuard)
+  async googleAuthCallback(@Req() req) {
+    const tokens = await this.authService.googleSignIn(req.user);
 
     return tokens;
   }

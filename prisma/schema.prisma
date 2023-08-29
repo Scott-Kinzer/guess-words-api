@@ -12,7 +12,7 @@ datasource db {
 
 model User {
   id        String     @id @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email     String     @unique
+  email     String
   password  String?
   UserAuth  UserAuth?
   AuthToken AuthToken?
@@ -22,7 +22,7 @@ model UserAuth {
   id      String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId  String  @unique @db.Uuid
   email   String
-  pincode String
+  pincode String?
   isValid Boolean @default(false)
 
   user User @relation(fields: [userId], references: [id])
