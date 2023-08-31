@@ -267,7 +267,7 @@ export class AuthService {
     return tokens;
   }
 
-  async googleSignIn(userGoogle: UserGoogleDto) {
+  async googleLogin(userGoogle: UserGoogleDto) {
     const user = await this.prismaService.user.findFirst({
       where: {
         email: userGoogle.email,
@@ -320,5 +320,69 @@ export class AuthService {
 
       return tokens;
     }
+  }
+
+  async forgotPassword(email: string) {
+    const user = await this.prismaService.user.findFirst({
+      where: {
+        email: email,
+        password: {
+          not: null,
+        },
+        AND: {
+          password: {
+            not: '',
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new BadRequestException('User not exists');
+    }
+
+    const userValid = await this.prismaService.userAuth.findUnique({
+      where: {
+        userId: user.id,
+      },
+    });
+
+    if (!userValid.isValid) {
+      throw new BadRequestException('User not valid');
+    }
+
+    const generatedPincode = generatePincode();
+
+    const isAlreadyRecovered =
+      await this.prismaService.userPasswordRecoveryAuth.findUnique({
+        where: {
+          userId: user.id,
+          email: email,
+        },
+      });
+
+    if (isAlreadyRecovered) {
+      await this.prismaService.userPasswordRecoveryAuth.update({
+        where: {
+          userId: user.id,
+          email: email,
+        },
+        data: {
+          pincodeCreatedAt: new Date(),
+          pincode: generatedPincode,
+        },
+      });
+    } else {
+      await this.prismaService.userPasswordRecoveryAuth.create({
+        data: {
+          userId: user.id,
+          email: email,
+          pincodeCreatedAt: new Date(),
+          pincode: generatedPincode,
+        },
+      });
+    }
+
+    await this.mailService.sendRecoveryPasswordEmail(email, generatedPincode);
   }
 }
