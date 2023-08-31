@@ -11,10 +11,12 @@ import { AuthService } from './auth.service';
 import { JoiValidationPipe } from './pipes/joiValidationPipe';
 import {
   LoginUserDto,
+  PasswordRefreshDto,
   PincodeUserDto,
   RefreshTokensDto,
   RegisterUserDto,
   loginUserSchema,
+  passwordRefreshSchema,
   pincodeUserSchema,
   refreshTokensSchema,
   registerUserSchema,
@@ -60,13 +62,21 @@ export class AuthController {
   @Get('google')
   @UseGuards(GoogleOauthGuard)
   // eslint-disable-next-line @typescript-eslint/no-empty-function
-  async auth() {}
+  async googleAuth() {}
 
   @Get('google-callback')
   @UseGuards(GoogleOauthGuard)
   async googleAuthCallback(@Req() req) {
-    const tokens = await this.authService.googleSignIn(req.user);
+    const tokens = await this.authService.googleLogin(req.user);
 
     return tokens;
+  }
+
+  @Post('forgot-password')
+  @UsePipes(new JoiValidationPipe(passwordRefreshSchema))
+  async forgotPassword(@Body() userData: PasswordRefreshDto) {
+    await this.authService.forgotPassword(userData.email);
+
+    return { message: `Pincode mailed to ${userData.email}` };
   }
 }

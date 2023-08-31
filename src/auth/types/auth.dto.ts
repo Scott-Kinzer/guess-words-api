@@ -57,3 +57,11 @@ export const userGoogleSchema = Joi.object({
   email: Joi.string().required(),
   firstName: Joi.string().required(),
 });
+
+export type PasswordRefreshDto = {
+  email: string;
+};
+
+export const passwordRefreshSchema = Joi.object({
+  email: Joi.string().required(),
+});
