@@ -2,384 +2,154 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import {
   LoginUserDto,
   PincodeUserDto,
-  RefreshTokensDto,
   RegisterUserDto,
-  UserGoogleDto,
 } from './types/auth.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { comparePasswords, hashPassword } from 'src/helpers/hashPassword';
 import { generatePincode } from 'src/helpers/generatePincode';
 import { MailService } from 'src/mail/mail.service';
-import { JwtService } from '@nestjs/jwt';
+import { TokenService } from './token.service';
+import { findUser } from 'src/helpers/prisma.user';
+import { User } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly mailService: MailService,
-    private jwtService: JwtService,
+    private readonly tokenService: TokenService,
   ) {}
 
   async registerUser(registerUserDto: RegisterUserDto) {
-    const isUserExists = await this.prismaService.user.findFirst({
-      where: {
-        email: registerUserDto.email,
-        password: {
-          not: null,
-        },
-        AND: {
-          password: {
-            not: '',
-          },
-        },
-      },
-    });
-
+    const user = await findUser(this.prismaService, registerUserDto.email);
     let validUser = null;
 
-    if (isUserExists) {
+    if (user) {
       validUser = await this.prismaService.userAuth.findUnique({
-        where: {
-          userId: isUserExists.id,
-        },
+        where: { userId: user.id },
       });
     }
 
-    if (validUser && validUser?.isValid) {
+    if (validUser && validUser?.isValid)
       throw new BadRequestException('User already exists');
-    }
 
     const hashedPassword = await hashPassword(registerUserDto.password);
-
     const generatedPincode = generatePincode();
 
-    if (!validUser && !isUserExists) {
-      const createdUser = await this.prismaService.user.create({
+    let userToOperate: null | User = null;
+
+    if (!validUser && !user) {
+      userToOperate = await this.prismaService.user.create({
         data: { email: registerUserDto.email, password: hashedPassword },
       });
+
+      const { email, id: userId } = userToOperate;
 
       await this.prismaService.userAuth.create({
-        data: {
-          userId: createdUser.id,
-          email: createdUser.email,
-          pincode: generatedPincode,
-        },
+        data: { userId, email, pincode: generatedPincode },
       });
-
-      await this.mailService.sendEmail(createdUser.email, generatedPincode);
-
-      delete createdUser.password;
-
-      return createdUser;
     } else {
-      const updatedUser = await this.prismaService.user.update({
-        where: {
-          id: isUserExists.id,
-          email: isUserExists.email,
-        },
-        data: { email: registerUserDto.email, password: hashedPassword },
+      userToOperate = await this.prismaService.user.update({
+        where: { id: user.id, email: user.email },
+        data: { password: hashedPassword },
       });
 
       await this.prismaService.userAuth.update({
-        where: {
-          userId: updatedUser.id,
-        },
-        data: {
-          email: updatedUser.email,
-          pincode: generatedPincode,
-        },
+        where: { userId: userToOperate.id },
+        data: { pincode: generatedPincode },
       });
-
-      await this.mailService.sendEmail(updatedUser.email, generatedPincode);
-
-      delete updatedUser.password;
-
-      return updatedUser;
     }
+
+    await this.mailService.sendEmail(userToOperate.email, generatedPincode);
+
+    delete userToOperate.password;
+
+    return userToOperate;
   }
 
   async registerPincodeUser(pincodeUserDto: PincodeUserDto) {
-    const user = await this.prismaService.user.findFirst({
-      where: {
-        email: pincodeUserDto.email,
-        password: {
-          not: null,
-        },
-        AND: {
-          password: {
-            not: '',
-          },
-        },
-      },
-    });
-
-    if (!user) {
-      throw new BadRequestException('User not exists');
-    }
+    const user = await findUser(this.prismaService, pincodeUserDto.email);
+    if (!user) throw new BadRequestException('User not exists');
 
     const validUser = await this.prismaService.userAuth.findUnique({
-      where: {
-        userId: user.id,
-      },
+      where: { userId: user.id },
     });
+    if (!validUser) throw new BadRequestException('User not exists');
 
-    if (!validUser) {
-      throw new BadRequestException('User not exists');
-    }
-
-    if (validUser.isValid) {
+    if (validUser.isValid)
       throw new BadRequestException('User already registered');
-    }
 
-    if (pincodeUserDto.pincode !== validUser.pincode) {
+    if (pincodeUserDto.pincode !== validUser.pincode)
       throw new BadRequestException('Wrong code');
-    }
 
     await this.prismaService.userAuth.update({
-      where: {
-        userId: user.id,
-      },
-      data: {
-        isValid: true,
-      },
+      where: { userId: user.id },
+      data: { isValid: true },
     });
 
-    const tokens = this.generateTokens({ id: user.id, email: user.email });
+    const tokens = this.tokenService.generateTokens(user.id, user.email);
 
     await this.prismaService.authToken.create({
-      data: {
-        userId: user.id,
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-      },
+      data: { userId: user.id, ...tokens },
     });
 
     return tokens;
   }
 
-  generateTokens(user: { id: string; email: string }) {
-    const accessToken = this.jwtService.sign(user, { expiresIn: '10h' });
-    const refreshToken = this.jwtService.sign(user, { expiresIn: '7d' });
-
-    return { accessToken, refreshToken };
-  }
-
-  async refreshToken(refreshTokens: RefreshTokensDto) {
-    try {
-      this.jwtService.verify(refreshTokens.refreshToken);
-
-      const tokenData = this.jwtService.decode(refreshTokens.refreshToken) as {
-        id: string;
-        email: string;
-      };
-
-      const user = await this.prismaService.user.findUnique({
-        where: {
-          id: tokenData.id,
-          email: tokenData.email,
-        },
-      });
-
-      if (!user) {
-        throw new BadRequestException('Not valid tokens');
-      }
-
-      const isTokensExist = await this.prismaService.authToken.findUnique({
-        where: {
-          userId: user.id,
-          accessToken: refreshTokens.accessToken,
-          refreshToken: refreshTokens.refreshToken,
-        },
-      });
-
-      if (!isTokensExist) {
-        throw new BadRequestException('Not valid tokens');
-      }
-
-      const tokens = this.generateTokens({ id: user.id, email: user.email });
-
-      await this.prismaService.authToken.update({
-        where: {
-          userId: user.id,
-        },
-        data: {
-          accessToken: tokens.accessToken,
-          refreshToken: tokens.refreshToken,
-        },
-      });
-
-      return tokens;
-    } catch (e) {
-      throw new BadRequestException(e.message);
-    }
-  }
-
   async login(loginUser: LoginUserDto) {
-    const user = await this.prismaService.user.findFirst({
-      where: {
-        email: loginUser.email,
-        password: {
-          not: null,
-        },
-        AND: {
-          password: {
-            not: '',
-          },
-        },
-      },
-    });
-
+    const user = await findUser(this.prismaService, loginUser.email);
     const userValid = await this.prismaService.userAuth.findUnique({
-      where: {
-        userId: user.id,
-      },
+      where: { userId: user.id },
     });
 
-    if (!userValid.isValid) {
-      throw new BadRequestException('User not valid');
-    }
-
-    if (!user) {
-      throw new BadRequestException('User not exists');
-    }
+    if (!userValid.isValid) throw new BadRequestException('User not valid');
+    if (!user) throw new BadRequestException('User not exists');
 
     const isValidPassword = await comparePasswords(
       loginUser.password,
       user.password,
     );
+    if (!isValidPassword) throw new BadRequestException('Wrong password');
 
-    if (!isValidPassword) {
-      throw new BadRequestException('Wrong password');
-    }
-
-    const tokens = this.generateTokens({ id: user.id, email: user.email });
+    const tokens = this.tokenService.generateTokens(user.id, user.email);
 
     await this.prismaService.authToken.update({
-      where: {
-        userId: user.id,
-      },
-      data: {
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-      },
+      where: { userId: user.id },
+      data: { ...tokens },
     });
 
     return tokens;
   }
 
-  async googleLogin(userGoogle: UserGoogleDto) {
-    const user = await this.prismaService.user.findFirst({
-      where: {
-        email: userGoogle.email,
-        password: null,
-      },
-    });
-
-    if (!user) {
-      const userCreated = await this.prismaService.user.create({
-        data: {
-          email: userGoogle.email,
-        },
-      });
-
-      const tokens = this.generateTokens({
-        id: userCreated.id,
-        email: userCreated.email,
-      });
-
-      await this.prismaService.userAuth.create({
-        data: {
-          userId: userCreated.id,
-          email: userCreated.email,
-          pincode: null,
-          isValid: true,
-        },
-      });
-
-      await this.prismaService.authToken.create({
-        data: {
-          userId: userCreated.id,
-          accessToken: tokens.accessToken,
-          refreshToken: tokens.refreshToken,
-        },
-      });
-
-      return tokens;
-    } else {
-      const tokens = this.generateTokens({ id: user.id, email: user.email });
-
-      await this.prismaService.authToken.update({
-        where: {
-          userId: user.id,
-        },
-        data: {
-          accessToken: tokens.accessToken,
-          refreshToken: tokens.refreshToken,
-        },
-      });
-
-      return tokens;
-    }
-  }
-
   async forgotPassword(email: string) {
-    const user = await this.prismaService.user.findFirst({
-      where: {
-        email: email,
-        password: {
-          not: null,
-        },
-        AND: {
-          password: {
-            not: '',
-          },
-        },
-      },
-    });
-
-    if (!user) {
-      throw new BadRequestException('User not exists');
-    }
+    const user = await findUser(this.prismaService, email);
+    if (!user) throw new BadRequestException('User not exists');
 
     const userValid = await this.prismaService.userAuth.findUnique({
-      where: {
-        userId: user.id,
-      },
+      where: { userId: user.id },
     });
-
-    if (!userValid.isValid) {
-      throw new BadRequestException('User not valid');
-    }
+    if (!userValid.isValid) throw new BadRequestException('User not valid');
 
     const generatedPincode = generatePincode();
 
     const isAlreadyRecovered =
       await this.prismaService.userPasswordRecoveryAuth.findUnique({
-        where: {
-          userId: user.id,
-          email: email,
-        },
+        where: { userId: user.id, email },
       });
+
+    const pincodeData = {
+      pincodeCreatedAt: new Date(),
+      pincode: generatedPincode,
+    };
 
     if (isAlreadyRecovered) {
       await this.prismaService.userPasswordRecoveryAuth.update({
-        where: {
-          userId: user.id,
-          email: email,
-        },
-        data: {
-          pincodeCreatedAt: new Date(),
-          pincode: generatedPincode,
-        },
+        where: { userId: user.id, email },
+        data: { ...pincodeData },
       });
     } else {
       await this.prismaService.userPasswordRecoveryAuth.create({
-        data: {
-          userId: user.id,
-          email: email,
-          pincodeCreatedAt: new Date(),
-          pincode: generatedPincode,
-        },
+        data: { userId: user.id, email, ...pincodeData },
       });
     }
 
