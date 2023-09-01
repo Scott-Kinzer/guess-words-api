@@ -22,10 +22,16 @@ import {
   registerUserSchema,
 } from './types/auth.dto';
 import { GoogleOauthGuard } from './guards/google.oauth.guard';
+import { AuthGoogleService } from './auth.google.service';
+import { TokenService } from './token.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly authGoogleService: AuthGoogleService,
+    private readonly tokenService: TokenService,
+  ) {}
 
   @Post('register')
   @UsePipes(new JoiValidationPipe(registerUserSchema))
@@ -46,7 +52,7 @@ export class AuthController {
   @Post('refresh')
   @UsePipes(new JoiValidationPipe(refreshTokensSchema))
   async refreshToken(@Body() refreshTokens: RefreshTokensDto) {
-    const tokens = await this.authService.refreshToken(refreshTokens);
+    const tokens = await this.tokenService.refreshToken(refreshTokens);
 
     return tokens;
   }
@@ -67,7 +73,7 @@ export class AuthController {
   @Get('google-callback')
   @UseGuards(GoogleOauthGuard)
   async googleAuthCallback(@Req() req) {
-    const tokens = await this.authService.googleLogin(req.user);
+    const tokens = await this.authGoogleService.googleLogin(req.user);
 
     return tokens;
   }
