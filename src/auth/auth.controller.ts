@@ -13,11 +13,13 @@ import {
   LoginUserDto,
   PasswordRefreshDto,
   PincodeUserDto,
+  PincodeValidateDto,
   RefreshTokensDto,
   RegisterUserDto,
   loginUserSchema,
   passwordRefreshSchema,
   pincodeUserSchema,
+  pincodeValidateScheme,
   refreshTokensSchema,
   registerUserSchema,
 } from './types/auth.dto';
@@ -84,5 +86,13 @@ export class AuthController {
     await this.authService.forgotPassword(userData.email);
 
     return { message: `Pincode mailed to ${userData.email}` };
+  }
+
+  @Post('pincode-validate')
+  @UsePipes(new JoiValidationPipe(pincodeValidateScheme))
+  async validatePincode(@Body() pincodeData: PincodeValidateDto) {
+    await this.authService.validateRecoveryPincode(pincodeData);
+
+    return { message: `Pincode valid` };
   }
 }

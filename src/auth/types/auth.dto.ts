@@ -65,3 +65,13 @@ export type PasswordRefreshDto = {
 export const passwordRefreshSchema = Joi.object({
   email: Joi.string().required(),
 });
+
+export type PincodeValidateDto = {
+  email: string;
+  pincode: string;
+};
+
+export const pincodeValidateScheme = Joi.object({
+  email: Joi.string().required(),
+  pincode: Joi.string().required().length(5),
+});
