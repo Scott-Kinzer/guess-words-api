@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import {
   LoginUserDto,
   PincodeUserDto,
+  PincodeValidateDto,
   RegisterUserDto,
 } from './types/auth.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -154,5 +155,33 @@ export class AuthService {
     }
 
     await this.mailService.sendRecoveryPasswordEmail(email, generatedPincode);
+  }
+
+  async validateRecoveryPincode(pincodeData: PincodeValidateDto) {
+    const user = await findUser(this.prismaService, pincodeData.email);
+
+    const recoveryUser =
+      await this.prismaService.userPasswordRecoveryAuth.findUnique({
+        where: {
+          email: pincodeData.email,
+          userId: user.id,
+        },
+      });
+
+    if (!recoveryUser.pincode)
+      throw new BadRequestException('Pincode not valid');
+
+    if (pincodeData.pincode !== recoveryUser.pincode)
+      throw new BadRequestException('Pincode not valid');
+
+    const currentDate = new Date();
+    const dbPincodeDate = recoveryUser.pincodeCreatedAt;
+
+    const diff =
+      Math.abs(currentDate.getTime() - dbPincodeDate.getTime()) / 3600000;
+
+    if (diff > 24) {
+      throw new BadRequestException('Pincode not valid');
+    }
   }
 }
