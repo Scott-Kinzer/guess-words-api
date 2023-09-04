@@ -75,3 +75,26 @@ export const pincodeValidateScheme = Joi.object({
   email: Joi.string().required(),
   pincode: Joi.string().required().length(5),
 });
+
+export type PasswordRecoveryDto = {
+  email: string;
+  pincode: string;
+  password: string;
+};
+
+export const passwordRecoveryScheme = Joi.object({
+  email: Joi.string().email().required(),
+  password: Joi.string()
+    .required()
+    .min(8)
+    .pattern(
+      new RegExp(/[a-zA-Z]/),
+      'Password must contain at least one letter',
+    )
+    .pattern(new RegExp(/[0-9]/), 'Password must contain at least one number')
+    .pattern(
+      new RegExp(/[!@#$%^&*(),.?":{}|<>]/),
+      'Password must contain at least one special character',
+    ),
+  pincode: Joi.string().required().length(5),
+});

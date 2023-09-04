@@ -11,12 +11,14 @@ import { AuthService } from './auth.service';
 import { JoiValidationPipe } from './pipes/joiValidationPipe';
 import {
   LoginUserDto,
+  PasswordRecoveryDto,
   PasswordRefreshDto,
   PincodeUserDto,
   PincodeValidateDto,
   RefreshTokensDto,
   RegisterUserDto,
   loginUserSchema,
+  passwordRecoveryScheme,
   passwordRefreshSchema,
   pincodeUserSchema,
   pincodeValidateScheme,
@@ -94,5 +96,13 @@ export class AuthController {
     await this.authService.validateRecoveryPincode(pincodeData);
 
     return { message: `Pincode valid` };
+  }
+
+  @Post('password-recovery')
+  @UsePipes(new JoiValidationPipe(passwordRecoveryScheme))
+  async recoveryPassword(@Body() passwordRecoveryData: PasswordRecoveryDto) {
+    await this.authService.passwordRecovery(passwordRecoveryData);
+
+    return { message: `Password updated` };
   }
 }
