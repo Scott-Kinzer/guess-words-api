@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import {
   LoginUserDto,
+  PasswordRecoveryDto,
   PincodeUserDto,
   PincodeValidateDto,
   RegisterUserDto,
@@ -160,6 +161,8 @@ export class AuthService {
   async validateRecoveryPincode(pincodeData: PincodeValidateDto) {
     const user = await findUser(this.prismaService, pincodeData.email);
 
+    if (!user) throw new BadRequestException('User not exists');
+
     const recoveryUser =
       await this.prismaService.userPasswordRecoveryAuth.findUnique({
         where: {
@@ -183,5 +186,31 @@ export class AuthService {
     if (diff > 24) {
       throw new BadRequestException('Pincode not valid');
     }
+  }
+
+  async passwordRecovery(data: PasswordRecoveryDto) {
+    await this.validateRecoveryPincode(data);
+    const user = await findUser(this.prismaService, data.email);
+
+    const hashedPassword = await hashPassword(data.password);
+
+    await this.prismaService.userPasswordRecoveryAuth.update({
+      where: {
+        email: data.email,
+        userId: user.id,
+      },
+      data: {
+        pincode: null,
+      },
+    });
+
+    await this.prismaService.user.update({
+      where: {
+        id: user.id,
+      },
+      data: {
+        password: hashedPassword,
+      },
+    });
   }
 }
