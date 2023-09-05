@@ -17,6 +17,7 @@ model User {
   UserAuth                 UserAuth?
   AuthToken                AuthToken?
   UserPasswordRecoveryAuth UserPasswordRecoveryAuth?
+  UserGuessedWords         UserGuessedWords[]
 }
 
 model UserAuth {
@@ -47,4 +48,39 @@ model UserPasswordRecoveryAuth {
   pincode          String?
   pincodeCreatedAt DateTime
   user             User     @relation(fields: [userId], references: [id])
+}
+
+enum WordType {
+  sports
+  animals
+  science
+  food
+}
+
+model Words {
+  id               String             @id @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  word             String             @unique
+  type             WordType
+  level            Int
+  UserGuessedWords UserGuessedWords[]
+  WordHints        WordHints[]
+}
+
+model WordHints {
+  id        String @id @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  wordId    String @db.Uuid
+  hint      String
+  levelHint Int
+
+  words Words @relation(fields: [wordId], references: [id])
+}
+
+model UserGuessedWords {
+  id String @id @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  userId String @db.Uuid
+  wordId String @db.Uuid
+
+  words Words @relation(fields: [wordId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
 }
