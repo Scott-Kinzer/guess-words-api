@@ -3,6 +3,7 @@ import {
   Get,
   Param,
   ParseEnumPipe,
+  ParseUUIDPipe,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -21,5 +22,14 @@ export class WordsController {
     @Param('type', new ParseEnumPipe(WordType)) type: WordType,
   ) {
     return this.wordsService.findWordsByType(type, req.user.id);
+  }
+
+  @Get(':id')
+  @UseGuards(AuthGuard)
+  async getWordById(
+    @Req() req,
+    @Param('id', new ParseUUIDPipe()) wordId: string,
+  ) {
+    return this.wordsService.findWordById(wordId, req.user.id);
   }
 }

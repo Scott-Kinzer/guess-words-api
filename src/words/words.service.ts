@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { WordType } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { WordsClientResult } from './types/word.type';
@@ -32,5 +32,23 @@ export class WordsService {
         w."type" = ${wordsType}::"WordType";
 `) as WordsClientResult[];
     return result;
+  }
+
+  async findWordById(wordId: string, userId: string) {
+    const userGuessWord = await this.prismaService.userGuessedWords.findFirst({
+      where: { wordId, userId },
+    });
+
+    const wordData = await this.prismaService.words.findUnique({
+      where: { id: wordId },
+    });
+
+    if (!wordData) {
+      throw new BadRequestException('Word not exists');
+    }
+
+    if (!userGuessWord) delete wordData.word;
+
+    return { ...wordData, wordLength: wordData?.word?.length ?? 0 };
   }
 }
