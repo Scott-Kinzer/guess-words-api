@@ -73,6 +73,11 @@ model WordHints {
   levelHint Int
 
   words Words @relation(fields: [wordId], references: [id])
+
+  // Define a unique constraint for levelHint within a wordId
+  @@unique([wordId, levelHint], name: "unique_level_hint_per_word_id")
+  // Define a custom index for levelHint and wordId
+  @@index([levelHint, wordId], name: "unique_level_hint_per_word")
 }
 
 model UserGuessedWords {

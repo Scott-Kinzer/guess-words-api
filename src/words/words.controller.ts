@@ -3,6 +3,7 @@ import {
   Get,
   Param,
   ParseEnumPipe,
+  ParseIntPipe,
   ParseUUIDPipe,
   Req,
   UseGuards,
@@ -31,5 +32,14 @@ export class WordsController {
     @Param('id', new ParseUUIDPipe()) wordId: string,
   ) {
     return this.wordsService.findWordById(wordId, req.user.id);
+  }
+
+  @Get('hint/:id/:levelHint')
+  @UseGuards(AuthGuard)
+  async getWordHintById(
+    @Param('id', new ParseUUIDPipe()) wordId: string,
+    @Param('levelHint', new ParseIntPipe()) levelHint: number,
+  ) {
+    return this.wordsService.findWordHint(wordId, levelHint);
   }
 }
