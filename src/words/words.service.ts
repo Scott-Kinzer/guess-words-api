@@ -47,8 +47,36 @@ export class WordsService {
       throw new BadRequestException('Word not exists');
     }
 
+    const maxLevelHint = await this.prismaService.wordHints.aggregate({
+      _max: { levelHint: true },
+      where: { wordId },
+    });
+
+    const maxLevelHintValue = maxLevelHint._max.levelHint;
+
+    const wordLength = wordData?.word?.length ?? 0;
+
     if (!userGuessWord) delete wordData.word;
 
-    return { ...wordData, wordLength: wordData?.word?.length ?? 0 };
+    const hint = await this.findWordHint(wordId, 1);
+
+    return {
+      ...wordData,
+      wordLength,
+      hint,
+      maxLevelHint: maxLevelHintValue,
+    };
+  }
+
+  async findWordHint(wordId: string, levelHint: number) {
+    const wordHint = await this.prismaService.wordHints.findFirst({
+      where: { wordId, levelHint },
+    });
+
+    if (!wordHint) {
+      throw new BadRequestException('Hint not exists');
+    }
+
+    return wordHint;
   }
 }
