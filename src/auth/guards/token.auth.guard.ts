@@ -20,9 +20,8 @@ export class AuthGuard implements CanActivate {
       const request = context.switchToHttp().getRequest();
       const { authorization }: any = request.headers;
 
-      if (!authorization || authorization.trim() === '') {
+      if (!authorization || authorization.trim() === '')
         throw new UnauthorizedException('Please provide token');
-      }
 
       const authToken = authorization.replace(/bearer/gim, '').trim();
 
@@ -32,9 +31,7 @@ export class AuthGuard implements CanActivate {
         },
       });
 
-      if (!dbTokens) {
-        throw new Error('Not valid token');
-      }
+      if (!dbTokens) throw new Error('Not valid token');
 
       const resp = await this.jwtService.verify(authToken);
       request.user = resp;

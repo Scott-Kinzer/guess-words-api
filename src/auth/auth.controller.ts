@@ -17,6 +17,11 @@ import {
   PincodeValidateDto,
   RefreshTokensDto,
   RegisterUserDto,
+} from './types/auth.dto';
+import { GoogleOauthGuard } from './guards/google.oauth.guard';
+import { AuthGoogleService } from './auth.google.service';
+import { TokenService } from './token.service';
+import {
   loginUserSchema,
   passwordRecoveryScheme,
   passwordRefreshSchema,
@@ -24,10 +29,7 @@ import {
   pincodeValidateScheme,
   refreshTokensSchema,
   registerUserSchema,
-} from './types/auth.dto';
-import { GoogleOauthGuard } from './guards/google.oauth.guard';
-import { AuthGoogleService } from './auth.google.service';
-import { TokenService } from './token.service';
+} from './validation/auth.validation';
 
 @Controller('auth')
 export class AuthController {
