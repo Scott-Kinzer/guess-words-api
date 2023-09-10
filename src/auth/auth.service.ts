@@ -165,10 +165,7 @@ export class AuthService {
 
     const recoveryUser =
       await this.prismaService.userPasswordRecoveryAuth.findUnique({
-        where: {
-          email: pincodeData.email,
-          userId: user.id,
-        },
+        where: { email: pincodeData.email, userId: user.id },
       });
 
     if (!recoveryUser.pincode)
@@ -183,9 +180,7 @@ export class AuthService {
     const diff =
       Math.abs(currentDate.getTime() - dbPincodeDate.getTime()) / 3600000;
 
-    if (diff > 24) {
-      throw new BadRequestException('Pincode not valid');
-    }
+    if (diff > 24) throw new BadRequestException('Pincode not valid');
   }
 
   async passwordRecovery(data: PasswordRecoveryDto) {
@@ -195,22 +190,13 @@ export class AuthService {
     const hashedPassword = await hashPassword(data.password);
 
     await this.prismaService.userPasswordRecoveryAuth.update({
-      where: {
-        email: data.email,
-        userId: user.id,
-      },
-      data: {
-        pincode: null,
-      },
+      where: { email: data.email, userId: user.id },
+      data: { pincode: null },
     });
 
     await this.prismaService.user.update({
-      where: {
-        id: user.id,
-      },
-      data: {
-        password: hashedPassword,
-      },
+      where: { id: user.id },
+      data: { password: hashedPassword },
     });
   }
 }
