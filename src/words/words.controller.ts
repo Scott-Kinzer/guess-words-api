@@ -1,16 +1,22 @@
 import {
+  Body,
   Controller,
   Get,
   Param,
   ParseEnumPipe,
   ParseIntPipe,
   ParseUUIDPipe,
+  Post,
   Req,
   UseGuards,
+  UsePipes,
 } from '@nestjs/common';
 import { WordType } from '@prisma/client';
 import { AuthGuard } from 'src/auth/guards/token.auth.guard';
 import { WordsService } from './words.service';
+import { guessWordShchema } from './validation/words.validation';
+import { JoiValidationPipe } from 'src/auth/pipes/joiValidationPipe';
+import { GuessWordDto } from './types/word.type';
 
 @Controller('words')
 export class WordsController {
@@ -23,6 +29,17 @@ export class WordsController {
     @Param('type', new ParseEnumPipe(WordType)) type: WordType,
   ) {
     return this.wordsService.findWordsByType(type, req.user.id);
+  }
+
+  @Post(':id')
+  @UseGuards(AuthGuard)
+  @UsePipes(new JoiValidationPipe(guessWordShchema))
+  async guessWord(
+    @Req() req,
+    @Body() wordData: GuessWordDto,
+    @Param('id', new ParseUUIDPipe()) wordId: string,
+  ) {
+    return this.wordsService.guessWord(wordId, wordData.word, req.user.id);
   }
 
   @Get(':id')
