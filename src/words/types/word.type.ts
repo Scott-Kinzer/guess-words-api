@@ -6,3 +6,7 @@ export type WordsClientResult = {
   level: number;
   is_guessed: boolean;
 };
+
+export type GuessWordDto = {
+  word: string;
+};

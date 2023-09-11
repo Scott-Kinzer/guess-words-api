@@ -74,4 +74,26 @@ export class WordsService {
 
     return wordHint;
   }
+
+  async guessWord(wordId: string, word: string, userId: string) {
+    const dbWord = await this.prismaService.words.findUnique({
+      where: { id: wordId },
+    });
+
+    if (!dbWord) throw new BadRequestException('Word not exists');
+    if (dbWord.word !== word) throw new BadRequestException('Wrong word');
+
+    const isAlreadyGuessed =
+      await this.prismaService.userGuessedWords.findFirst({
+        where: { userId, wordId },
+      });
+
+    if (!isAlreadyGuessed) {
+      await this.prismaService.userGuessedWords.create({
+        data: { userId, wordId: wordId },
+      });
+    }
+
+    return { message: 'Your guessed!' };
+  }
 }
