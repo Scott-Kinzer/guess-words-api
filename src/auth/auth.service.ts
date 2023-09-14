@@ -100,12 +100,14 @@ export class AuthService {
 
   async login(loginUser: LoginUserDto) {
     const user = await findUser(this.prismaService, loginUser.email);
+
+    if (!user) throw new BadRequestException('User not exists');
+
     const userValid = await this.prismaService.userAuth.findUnique({
       where: { userId: user.id },
     });
 
     if (!userValid.isValid) throw new BadRequestException('User not valid');
-    if (!user) throw new BadRequestException('User not exists');
 
     const isValidPassword = await comparePasswords(
       loginUser.password,
