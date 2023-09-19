@@ -96,4 +96,15 @@ export class WordsService {
 
     return { message: 'Your guessed!' };
   }
+
+  async findWordsTypes() {
+    const distinctWordTypes = await this.prismaService.words.findMany({
+      distinct: ['type'],
+      select: {
+        type: true,
+      },
+    });
+
+    return distinctWordTypes;
+  }
 }

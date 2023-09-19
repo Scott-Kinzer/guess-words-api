@@ -22,6 +22,12 @@ import { GuessWordDto } from './types/word.type';
 export class WordsController {
   constructor(private readonly wordsService: WordsService) {}
 
+  @Get('list/types')
+  @UseGuards(AuthGuard)
+  async getWordsTypes(): Promise<{ type: string }[]> {
+    return this.wordsService.findWordsTypes();
+  }
+
   @Get('list/:type')
   @UseGuards(AuthGuard)
   async getWordsByType(
