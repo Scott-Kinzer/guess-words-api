@@ -29,6 +29,7 @@ import {
   pincodeValidateScheme,
   refreshTokensSchema,
   registerUserSchema,
+  resendPincodeScheme,
 } from './validation/auth.validation';
 
 @Controller('auth')
@@ -38,6 +39,14 @@ export class AuthController {
     private readonly authGoogleService: AuthGoogleService,
     private readonly tokenService: TokenService,
   ) {}
+
+  @Post('resend-pincode')
+  @UsePipes(new JoiValidationPipe(resendPincodeScheme))
+  async resendRegisterPincode(@Body() registerUserDto: { email: string }) {
+    const user = await this.authService.resendPincode(registerUserDto);
+
+    return user;
+  }
 
   @Post('register')
   @UsePipes(new JoiValidationPipe(registerUserSchema))
