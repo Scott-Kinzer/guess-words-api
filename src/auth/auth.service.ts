@@ -201,4 +201,32 @@ export class AuthService {
       data: { password: hashedPassword },
     });
   }
+
+  async resendPincode({ email }: { email: string }) {
+    const user = await findUser(this.prismaService, email);
+    if (!user) throw new BadRequestException('User not exists');
+    let validUser = null;
+
+    if (user) {
+      validUser = await this.prismaService.userAuth.findUnique({
+        where: { userId: user.id },
+      });
+    }
+
+    if (validUser && validUser?.isValid)
+      throw new BadRequestException('User already registered');
+
+    const generatedPincode = generatePincode();
+
+    await this.prismaService.userAuth.update({
+      where: { userId: user.id },
+      data: { pincode: generatedPincode },
+    });
+
+    await this.mailService.sendEmail(email, generatedPincode);
+
+    delete user.password;
+
+    return user;
+  }
 }

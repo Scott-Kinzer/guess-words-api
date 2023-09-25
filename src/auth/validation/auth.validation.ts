@@ -48,3 +48,7 @@ export const passwordRecoveryScheme = Joi.object({
   ...userObjCreds,
   pincode: Joi.string().required().length(5),
 });
+
+export const resendPincodeScheme = Joi.object({
+  email: Joi.string().email().required(),
+});
